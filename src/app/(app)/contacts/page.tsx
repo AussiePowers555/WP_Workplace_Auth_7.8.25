@@ -11,9 +11,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AddContactForm } from "./add-contact-form";
 import { useContacts } from "@/hooks/use-database";
 import { useToast } from "@/hooks/use-toast";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/context/AuthContext";
+import { authFetch } from "@/lib/auth-fetch";
 
 export default function ContactsPage() {
     const { toast } = useToast();
+    const { user } = useAuth();
     const { data: contacts, loading: contactsLoading, error: contactsError, create: createContact } = useContacts();
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<Contact['type']>('Insurer');
@@ -41,7 +45,23 @@ export default function ContactsPage() {
             });
         }
     }
-    
+
+    const handleDeleteContact = async (id: string) => {
+        if (!confirm("Are you sure you want to delete this contact?")) return;
+        try {
+            const response = await authFetch(`/api/contacts/${id}`, { method: "DELETE" }, user);
+            if (!response.ok) {
+                throw new Error('Failed to delete contact');
+            }
+            toast({ title: "Contact Deleted", description: "The contact has been removed." });
+            // Refresh contacts list
+            window.location.reload();
+        } catch (err) {
+            console.error("Delete contact failed", err);
+            toast({ variant: "destructive", title: "Error", description: "Failed to delete contact." });
+        }
+    };
+
     if (contactsLoading) {
         return <div className="flex items-center justify-center h-64 text-muted-foreground">Loading contacts...</div>;
     }
@@ -106,7 +126,14 @@ export default function ContactsPage() {
                                                         <TableCell>{contact.phone}</TableCell>
                                                         <TableCell>{contact.email}</TableCell>
                                                         <TableCell className="text-right">
-                                                            <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
+                                                            <DropdownMenu>
+                                                                <DropdownMenuTrigger asChild>
+                                                                    <Button variant="ghost" size="icon"><MoreVertical className="h-4 w-4" /></Button>
+                                                                </DropdownMenuTrigger>
+                                                                <DropdownMenuContent align="end">
+                                                                    <DropdownMenuItem onSelect={() => handleDeleteContact(contact.id)}>Delete</DropdownMenuItem>
+                                                                </DropdownMenuContent>
+                                                            </DropdownMenu>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))

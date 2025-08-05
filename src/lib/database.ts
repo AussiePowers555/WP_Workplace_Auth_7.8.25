@@ -567,8 +567,8 @@ function seedCases() {
       at_fault_party_postcode, at_fault_party_claim_number, at_fault_party_insurance_company,
       at_fault_party_insurer, at_fault_party_vehicle_rego, assigned_lawyer_id, assigned_rental_company_id,
       invoiced, reserve, agreed, paid, accident_date, accident_time, accident_description,
-      rental_company, lawyer
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      rental_company, lawyer, created_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const initialCases = [
@@ -904,6 +904,35 @@ export const DatabaseService = {
              contactData.phone, contactData.email, contactData.address);
 
     return { id, ...contactData };
+  },
+
+  getContactById: (id: string): ContactFrontend | null => {
+    ensureServerSide();
+    const stmt = db.prepare('SELECT * FROM contacts WHERE id = ?');
+    const row = stmt.get(id);
+    return row ? SchemaTransformers.contactDbToFrontend(row) : null;
+  },
+
+  updateContact: (id: string, updates: any): void => {
+    ensureServerSide();
+    const fields = Object.keys(updates);
+    const values = Object.values(updates);
+    const setClause = fields.map(field => `${field} = ?`).join(', ');
+
+    const stmt = db.prepare(`
+      UPDATE contacts
+      SET ${setClause}, updated_at = ?
+      WHERE id = ?
+    `);
+
+    stmt.run(...values, new Date().toISOString(), id);
+  },
+
+  deleteContact: (id: string): boolean => {
+    ensureServerSide();
+    const stmt = db.prepare('DELETE FROM contacts WHERE id = ?');
+    const result = stmt.run(id);
+    return result.changes > 0;
   },
 
   // Workspace methods
