@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -32,7 +33,7 @@ export function UserHeader() {
   const { toast } = useToast();
 
   // Keyboard shortcut for Back to Main (Alt+M)
-  React.useEffect(() => {
+  useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (e.altKey && e.key === 'm' && role === "admin" && name !== 'Main Workspace') {
         e.preventDefault();
