@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { DatabaseService, ensureDatabaseInitialized } from '@/lib/database';
 import { importedBikes } from '@/data/imported-bikes';
 import type { BikeFrontend as Bike } from '@/lib/database-schema';
+import { requireAuth } from '@/lib/server-auth';
 
 // Transform database row to Bike interface
 function transformDbBikeToFrontend(dbBike: any): Bike {
@@ -57,18 +58,27 @@ function transformFrontendBikeToDb(bike: any): any {
   };
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     await ensureDatabaseInitialized();
     
-    // Get all bikes from database
-    let bikes = DatabaseService.getAllBikes();
+    // Authenticate user
+    const authResult = await requireAuth(request);
+    if (authResult instanceof Response) {
+      return authResult; // Return error response
+    }
+    const { userId, userRole, workspaceId } = authResult;
     
-    // If no bikes in database, import them from the CSV data
-    if (bikes.length === 0) {
+    // Get bikes filtered by workspace if user is workspace-scoped
+    let bikes = userRole === 'workspace' && workspaceId
+      ? DatabaseService.getBikes(workspaceId)
+      : DatabaseService.getBikes();
+    
+    // If no bikes in database, import them from the CSV data (admin only)
+    if (bikes.length === 0 && userRole === 'admin') {
       console.log('No bikes in database, importing from CSV data...');
       DatabaseService.bulkInsertBikes(importedBikes);
-      bikes = DatabaseService.getAllBikes();
+      bikes = DatabaseService.getBikes();
     }
     
     // Transform bikes to frontend format
@@ -84,10 +94,23 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     await ensureDatabaseInitialized();
+    
+    // Authenticate user
+    const authResult = await requireAuth(request);
+    if (authResult instanceof Response) {
+      return authResult; // Return error response
+    }
+    const { userId, userRole, workspaceId } = authResult;
+    
     const bikeData = await request.json();
     
     // Transform to database format
     const dbBikeData = transformFrontendBikeToDb(bikeData);
+    
+    // Set workspace_id for workspace users
+    if (userRole === 'workspace' && workspaceId) {
+      dbBikeData.workspace_id = workspaceId;
+    }
     
     const newBike = DatabaseService.createBike(dbBikeData);
     

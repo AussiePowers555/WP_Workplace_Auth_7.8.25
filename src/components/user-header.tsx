@@ -17,12 +17,32 @@ import { useSessionStorage } from "@/hooks/use-session-storage";
 import { useToast } from "@/hooks/use-toast";
 import { useWorkspace } from "@/contexts/WorkspaceContext";
 import { useAuth } from "@/context/AuthContext";
+import { WorkspaceName } from "@/components/workspace-name";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function UserHeader() {
   const { user, logout } = useAuth();
   const { name, role, backToMain } = useWorkspace();
   const router = useRouter();
   const { toast } = useToast();
+
+  // Keyboard shortcut for Back to Main (Alt+M)
+  React.useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.altKey && e.key === 'm' && role === "admin" && name !== 'Main Workspace') {
+        e.preventDefault();
+        handleBackToMain();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [role, name]);
 
   const handleLogout = () => {
     logout();
@@ -52,24 +72,28 @@ export function UserHeader() {
     <header className="flex h-16 items-center justify-between border-b bg-background/80 backdrop-blur-sm px-4 md:px-6 sticky top-0 z-30">
       <div className="flex items-center gap-4">
         <SidebarTrigger className="md:hidden" />
-        <div className="flex items-center gap-4">
-          {/* Workspace Display - Now more prominent and always visible */}
-          <div className="flex items-center gap-2">
-            <div className="text-lg font-semibold text-primary">
-              {name}
-            </div>
-            {role === "admin" && name !== 'Main Workspace' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs"
-                onClick={handleBackToMain}
-              >
-                Back to Main
-              </Button>
-            )}
-          </div>
-        </div>
+        <WorkspaceName />
+        {role === "admin" && name !== 'Main Workspace' && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-3 text-xs font-medium"
+                  onClick={handleBackToMain}
+                  aria-label="Return to main workspace (Alt+M)"
+                >
+                  Back to Main
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                <p className="text-xs">Return to main workspace</p>
+                <p className="text-xs text-muted-foreground">Alt+M</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
       
       <div className="flex items-center gap-4">

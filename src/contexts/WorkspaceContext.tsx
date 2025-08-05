@@ -1,7 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { useSessionStorage } from '@/hooks/use-session-storage';
+import { useToast } from '@/hooks/use-toast';
 
 export type WorkspaceRole = 'admin' | 'workspace';
 
@@ -37,28 +38,53 @@ export function WorkspaceProvider({
   const [workspaceName, setWorkspaceName] = useSessionStorage<string>('workspaceName', initialWorkspaceName);
   const [contactType, setContactType] = useSessionStorage<string | undefined>('contactType', initialContactType);
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+  
+  // Debounce timer for toast notifications
+  const toastTimerRef = React.useRef<NodeJS.Timeout>();
 
   // Generate display name based on current workspace
   const displayName = activeWorkspace && activeWorkspace !== 'MAIN' 
     ? `${contactType || 'Client'}: ${workspaceName} Workspace`
     : 'Main Workspace';
 
-  const switchWorkspace = (workspaceId: string | null, newWorkspaceName?: string) => {
+  const switchWorkspace = useCallback((workspaceId: string | null, newWorkspaceName?: string) => {
     setIsLoading(true);
+    
+    // Clear any pending toast
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
     
     if (workspaceId && workspaceId !== 'MAIN') {
       setActiveWorkspace(workspaceId);
       if (newWorkspaceName) {
         setWorkspaceName(newWorkspaceName);
       }
+      
+      // Debounce toast notification
+      toastTimerRef.current = setTimeout(() => {
+        toast({
+          title: "Workspace switched",
+          description: `Now viewing ${newWorkspaceName || 'workspace'} data`,
+        });
+      }, 100);
     } else {
       setActiveWorkspace('MAIN');
       setWorkspaceName('Main Workspace');
       setContactType(undefined);
+      
+      // Debounce toast notification
+      toastTimerRef.current = setTimeout(() => {
+        toast({
+          title: "Switched to Main Workspace",
+          description: "Now viewing all cases across all workspaces",
+        });
+      }, 100);
     }
     
     setIsLoading(false);
-  };
+  }, [setActiveWorkspace, setWorkspaceName, setContactType, toast]);
 
   const backToMain = () => {
     switchWorkspace(null);
@@ -71,6 +97,15 @@ export function WorkspaceProvider({
       setContactType(undefined);
     }
   }, [activeWorkspace, setWorkspaceName, setContactType]);
+  
+  // Cleanup toast timer on unmount
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+      }
+    };
+  }, []);
 
   const contextValue: WorkspaceContextValue = {
     id: activeWorkspace === 'MAIN' ? undefined : activeWorkspace || undefined,

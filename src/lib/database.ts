@@ -314,8 +314,10 @@ function createTables() {
       image_url TEXT,
       image_hint TEXT,
       assignment TEXT DEFAULT '-',
+      workspace_id TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (workspace_id) REFERENCES workspaces (id) ON DELETE SET NULL
     )
   `);
 
@@ -345,6 +347,14 @@ function createTables() {
   try {
     db.exec(`ALTER TABLE user_accounts ADD COLUMN workspace_id TEXT`);
     console.log('✅ Added workspace_id column to user_accounts table');
+  } catch (e) {
+    // Column already exists, ignore error
+  }
+
+  // Add workspace_id column to existing bikes table if it doesn't exist
+  try {
+    db.exec(`ALTER TABLE bikes ADD COLUMN workspace_id TEXT`);
+    console.log('✅ Added workspace_id column to bikes table');
   } catch (e) {
     // Column already exists, ignore error
   }
@@ -1118,9 +1128,10 @@ export const DatabaseService = {
     return stmt.all();
   },
 
-  getBikes: (): BikeFrontend[] => {
+  getBikes: (workspaceId?: string): BikeFrontend[] => {
     ensureServerSide();
-    const stmt = db.prepare(`
+    
+    let query = `
       SELECT
         id,
         make,
@@ -1144,11 +1155,19 @@ export const DatabaseService = {
         assignment_start_date,
         assignment_end_date,
         year,
-        created_date
+        created_date,
+        workspace_id
       FROM bikes
-      ORDER BY make, model
-    `);
-    const rows = stmt.all();
+    `;
+    
+    if (workspaceId) {
+      query += ` WHERE workspace_id = ? OR workspace_id IS NULL`;
+    }
+    
+    query += ` ORDER BY make, model`;
+    
+    const stmt = db.prepare(query);
+    const rows = workspaceId ? stmt.all(workspaceId) : stmt.all();
     return rows.map((row: any) => SchemaTransformers.bikeDbToFrontend(row));
   },
 
