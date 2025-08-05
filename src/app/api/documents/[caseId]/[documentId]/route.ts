@@ -6,9 +6,9 @@ import path from 'path';
 
 export async function GET(
   request: Request,
-  context: { params: { caseId: string; documentId: string } }
+  context: { params: Promise<{ caseId: string; documentId: string }> }
 ) {
-  const { params } = context;
+  const params = await context.params;
   try {
     // Verify document exists and user has access
     const document = await DatabaseService.getDocumentById(params.documentId);

@@ -4,7 +4,7 @@ import { requireAuth, canAccessCase } from '@/lib/server-auth';
 
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // Initialize database if needed
@@ -17,7 +17,8 @@ export async function GET(
     }
     
     const { user } = authResult;
-    const { id } = context.params;
+    const params = await context.params;
+    const { id } = params;
     
     // Try to get case by ID first, then by case number if not found
     let caseData = DatabaseService.getCaseById(id);
@@ -44,7 +45,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // Initialize database if needed
@@ -57,7 +58,8 @@ export async function PUT(
     }
     
     const { user } = authResult;
-    const { id } = context.params;
+    const params = await context.params;
+    const { id } = params;
     
     // First check if case exists and user can access it
     let caseData = DatabaseService.getCaseById(id);
@@ -92,7 +94,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  context: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
     // Initialize database if needed
@@ -111,7 +113,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Admin access required for deletion' }, { status: 403 });
     }
 
-    const { id } = context.params;
+    const params = await context.params;
+    const { id } = params;
     
     // First check if case exists
     let caseData = DatabaseService.getCaseById(id);

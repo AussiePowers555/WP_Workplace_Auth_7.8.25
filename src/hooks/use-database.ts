@@ -17,30 +17,46 @@ function getUserFromStorage(): any {
   return null;
 }
 
-// Helper function to get auth headers (always include cookie and user hints when available)
+// Helper function to get auth headers
 function getAuthHeaders(user: any): Record<string, string> {
-  // Try context user, then session storage
-  let effectiveUser = user;
-  if (!effectiveUser || !effectiveUser.id || !effectiveUser.email) {
-    const fallbackUser = getUserFromStorage();
-    if (fallbackUser && fallbackUser.id && fallbackUser.email) {
-      console.log('🔄 Using fallback user for auth headers');
-      effectiveUser = fallbackUser;
-    }
-  }
-
   const headers: Record<string, string> = {};
-  // Prefer cookie-based auth for server routes; include cookie when running in browser
+  
+  // Try to get auth from httpOnly cookie first
   if (typeof document !== 'undefined') {
-    const cookie = document.cookie || '';
-    if (cookie.includes('wpa_auth=')) {
-      headers['cookie'] = cookie;
+    const cookie = document.cookie;
+    const authCookie = cookie.split(';').find(c => c.trim().startsWith('wpa_auth='));
+    
+    if (authCookie) {
+      try {
+        const cookieValue = decodeURIComponent(authCookie.split('=')[1]);
+        const authData = JSON.parse(cookieValue);
+        
+        if (authData.id) headers['x-user-id'] = authData.id;
+        if (authData.email) headers['x-user-email'] = authData.email;
+        
+        console.log('🔑 Auth headers from cookie:', headers);
+        return headers;
+      } catch (error) {
+        console.error('Error parsing auth cookie:', error);
+      }
     }
   }
-  // Also include user hint headers if we have them (some routes log/expect them)
-  if (effectiveUser?.id) headers['x-user-id'] = effectiveUser.id;
-  if (effectiveUser?.email) headers['x-user-email'] = effectiveUser.email;
-
+  
+  // Fallback to session storage if cookie not available
+  if (!user) {
+    const fallbackUser = getUserFromStorage();
+    if (fallbackUser) {
+      console.log('🔄 Using fallback user for auth headers');
+      user = fallbackUser;
+    } else {
+      console.log('❌ No user available for auth headers (tried fallback)');
+      return {};
+    }
+  }
+  
+  if (user.id) headers['x-user-id'] = user.id;
+  if (user.email) headers['x-user-email'] = user.email;
+  
   console.log('🔑 Auth headers generated:', headers);
   return headers;
 }
@@ -96,12 +112,16 @@ export function useDatabase<T>(endpoint: string, initialData: T[] = []) {
 
   const create = useCallback(async (item: Omit<T, 'id'>) => {
     try {
+      // Get user with fallback for create operations
+      const effectiveUser = user || getUserFromStorage();
+      const headers = {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(effectiveUser),
+      };
+      
       const response = await fetch(`/api/${endpoint}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders(user),
-        },
+        headers,
         credentials: 'include' as RequestCredentials,
         body: JSON.stringify(item),
       });
@@ -121,12 +141,16 @@ export function useDatabase<T>(endpoint: string, initialData: T[] = []) {
 
   const update = useCallback(async (id: string, updates: Partial<T>) => {
     try {
+      // Get user with fallback for update operations
+      const effectiveUser = user || getUserFromStorage();
+      const headers = {
+        'Content-Type': 'application/json',
+        ...getAuthHeaders(effectiveUser),
+      };
+      
       const response = await fetch(`/api/${endpoint}/${id}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...getAuthHeaders(user),
-        },
+        headers,
         credentials: 'include' as RequestCredentials,
         body: JSON.stringify(updates),
       });
@@ -135,7 +159,7 @@ export function useDatabase<T>(endpoint: string, initialData: T[] = []) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
-      setData(prev => prev.map(item => 
+      setData(prev => prev.map(item =>
         (item as any).id === id ? { ...item, ...updates } : item
       ));
     } catch (err) {
@@ -146,18 +170,30 @@ export function useDatabase<T>(endpoint: string, initialData: T[] = []) {
 
   const remove = useCallback(async (id: string) => {
     try {
+      // Get user with fallback for delete operations
+      const effectiveUser = user || getUserFromStorage();
+      const headers = getAuthHeaders(effectiveUser);
+      
+      console.log(`🗑️ [DELETE DEBUG] ${endpoint}/${id} - user:`, effectiveUser);
+      console.log(`🗑️ [DELETE DEBUG] ${endpoint}/${id} - headers:`, headers);
+      
       const response = await fetch(`/api/${endpoint}/${id}`, {
         method: 'DELETE',
-        headers: getAuthHeaders(user),
+        headers,
         credentials: 'include' as RequestCredentials,
       });
       
+      console.log(`🗑️ [DELETE DEBUG] ${endpoint}/${id} - response status:`, response.status);
+      
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`🗑️ [DELETE DEBUG] ${endpoint}/${id} - error response:`, errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       
       setData(prev => prev.filter(item => (item as any).id !== id));
     } catch (err) {
+      console.error(`🗑️ [DELETE ERROR] ${endpoint}/${id}:`, err);
       setError(err instanceof Error ? err.message : 'Failed to delete item');
       throw err;
     }

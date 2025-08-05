@@ -4,7 +4,7 @@ import { requireAuth } from '@/lib/server-auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await ensureDatabaseInitialized();
@@ -14,7 +14,8 @@ export async function GET(
     if (authResult instanceof Response) {
       return authResult;
     }
-    const contact = DatabaseService.getContactById(params.id);
+    const { id } = await params;
+    const contact = DatabaseService.getContactById(id);
     
     if (!contact) {
       return NextResponse.json({ error: 'Contact not found' }, { status: 404 });
@@ -32,7 +33,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await ensureDatabaseInitialized();
@@ -42,15 +43,16 @@ export async function PUT(
     if (authResult instanceof Response) {
       return authResult;
     }
+    const { id } = await params;
     const updates = await request.json();
     
-    const contact = DatabaseService.getContactById(params.id);
+    const contact = DatabaseService.getContactById(id);
     if (!contact) {
       return NextResponse.json({ error: 'Contact not found' }, { status: 404 });
     }
     
-    DatabaseService.updateContact(params.id, updates);
-    const updatedContact = DatabaseService.getContactById(params.id);
+    DatabaseService.updateContact(id, updates);
+    const updatedContact = DatabaseService.getContactById(id);
     
     return NextResponse.json(updatedContact);
   } catch (error) {
@@ -64,7 +66,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await ensureDatabaseInitialized();
@@ -74,13 +76,14 @@ export async function DELETE(
     if (authResult instanceof Response) {
       return authResult;
     }
+    const { id } = await params;
     
-    const contact = DatabaseService.getContactById(params.id);
+    const contact = DatabaseService.getContactById(id);
     if (!contact) {
       return NextResponse.json({ error: 'Contact not found' }, { status: 404 });
     }
     
-    DatabaseService.deleteContact(params.id);
+    DatabaseService.deleteContact(id);
     return NextResponse.json({ message: 'Contact deleted successfully' });
   } catch (error) {
     console.error('Error deleting contact:', error);

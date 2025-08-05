@@ -3,13 +3,14 @@ import { DatabaseService, ensureDatabaseInitialized } from '@/lib/database';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await ensureDatabaseInitialized();
     
+    const { id } = await params;
     // Get case by ID first to get the case number
-    const case_ = await DatabaseService.getCaseById(params.id);
+    const case_ = await DatabaseService.getCaseById(id);
     if (!case_) {
       return NextResponse.json(
         { success: false, error: 'Case not found' },
@@ -34,13 +35,14 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await ensureDatabaseInitialized();
     
+    const { id } = await params;
     // Get case by ID first to get the case number
-    const case_ = await DatabaseService.getCaseById(params.id);
+    const case_ = await DatabaseService.getCaseById(id);
     if (!case_) {
       return NextResponse.json(
         { success: false, error: 'Case not found' },
