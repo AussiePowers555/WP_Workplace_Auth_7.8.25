@@ -535,7 +535,7 @@ function seedDeveloperAccounts() {
   ];
 
   for (const user of developerUsers) {
-    insertUser.run(user.id, user.email, user.password_hash, user.role, user.status, user.first_login, user.remember_login);
+    insertUser.run(user.id, user.email, user.password_hash, user.role, user.status, user.first_login ? 1 : 0, user.remember_login ? 1 : 0);
   }
   console.log('✅ Developer accounts created successfully');
 }
