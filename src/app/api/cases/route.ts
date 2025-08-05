@@ -29,7 +29,13 @@ export async function GET(request: NextRequest) {
     const allCases = DatabaseService.getAllCases();
     const filteredCases = filterCasesForUser(user, allCases);
     
-    return NextResponse.json(filteredCases);
+    return NextResponse.json(filteredCases, {
+      headers: {
+        'Cache-Control': 's-maxage=300, stale-while-revalidate=600',
+        'CDN-Cache-Control': 's-maxage=300',
+        'Vercel-CDN-Cache-Control': 's-maxage=300'
+      }
+    });
   } catch (error: unknown) {
     let errorMessage = 'Unknown error';
     let errorStack: string | undefined = undefined;

@@ -5,6 +5,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
+import { authFetch } from "@/lib/auth-fetch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -21,6 +23,7 @@ import { cn } from "@/lib/utils";
 export default function CommitmentsPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useAuth();
   const [commitments, setCommitments] = useLocalStorage<Commitment[]>("commitments", []);
   const [cases, setCases] = useState<Case[]>([]);
   const [casesLoading, setCasesLoading] = useState(true);
@@ -37,7 +40,7 @@ export default function CommitmentsPage() {
     const fetchCases = async () => {
       try {
         setCasesLoading(true);
-        const response = await fetch('/api/cases');
+        const response = await authFetch('/api/cases', {}, user);
         if (!response.ok) {
           throw new Error('Failed to fetch cases');
         }
@@ -55,8 +58,13 @@ export default function CommitmentsPage() {
       }
     };
 
-    fetchCases();
-  }, [toast]);
+    // Only fetch if user is available
+    if (user) {
+      fetchCases();
+    } else {
+      setCasesLoading(false);
+    }
+  }, [user, toast]);
 
   const getCommitmentsWithCaseData = (status: 'Open' | 'Closed') => {
       return commitments

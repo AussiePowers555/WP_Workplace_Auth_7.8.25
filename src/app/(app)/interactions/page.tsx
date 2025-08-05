@@ -4,6 +4,8 @@
 import { useEffect, useState } from "react";
 import type { CaseFrontend as Case } from "@/lib/database-schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAuth } from "@/context/AuthContext";
+import { authFetch } from "@/lib/auth-fetch";
 import { Phone, Mail, User, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -34,12 +36,13 @@ export default function AllInteractionsPage() {
   const [allInteractions, setAllInteractions] = useState<Interaction[]>([]);
   const [cases, setCases] = useState<Case[]>([]);
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
   
   useEffect(() => {
     const fetchCases = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/cases');
+        const response = await authFetch('/api/cases', {}, user);
         if (!response.ok) {
           throw new Error('Failed to fetch cases');
         }
@@ -52,8 +55,13 @@ export default function AllInteractionsPage() {
       }
     };
 
-    fetchCases();
-  }, []);
+    // Only fetch if user is available
+    if (user) {
+      fetchCases();
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
   
   useEffect(() => {
     if (typeof window !== 'undefined' && cases.length > 0) {

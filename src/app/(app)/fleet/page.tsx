@@ -14,6 +14,8 @@ import { AssignCaseForm } from "./assign-case-form";
 import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useContacts, useBikes } from "@/hooks/use-database";
+import { useAuth } from "@/context/AuthContext";
+import { authFetch } from "@/lib/auth-fetch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,12 +52,14 @@ export default function FleetPage() {
   const [cases, setCases] = useState<Case[]>([]);
   const [casesLoading, setCasesLoading] = useState(true);
   const { data: contacts } = useContacts();
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchCases = async () => {
       try {
         setCasesLoading(true);
-        const response = await fetch('/api/cases');
+        
+        const response = await authFetch('/api/cases', {}, user);
         if (!response.ok) {
           throw new Error('Failed to fetch cases');
         }
@@ -69,8 +73,13 @@ export default function FleetPage() {
       }
     };
 
-    fetchCases();
-  }, []);
+    // Only fetch if user is available
+    if (user) {
+      fetchCases();
+    } else {
+      setCasesLoading(false);
+    }
+  }, [user]);
   
   const { toast } = useToast();
   const [isClient, setIsClient] = useState(false)

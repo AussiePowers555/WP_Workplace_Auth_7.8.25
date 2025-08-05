@@ -19,10 +19,11 @@ function getUserFromStorage(): any {
 
 // Helper function to get auth headers
 function getAuthHeaders(user: any): Record<string, string> {
-  if (!user) {
+  // Check if user is null, undefined, or missing required fields
+  if (!user || !user.id || !user.email) {
     // Fallback to session storage
     const fallbackUser = getUserFromStorage();
-    if (fallbackUser) {
+    if (fallbackUser && fallbackUser.id && fallbackUser.email) {
       console.log('🔄 Using fallback user for auth headers');
       user = fallbackUser;
     } else {

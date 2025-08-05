@@ -1151,12 +1151,9 @@ export const DatabaseService = {
         image_url,
         image_hint,
         assignment,
-        assigned_case_id,
-        assignment_start_date,
-        assignment_end_date,
-        year,
-        created_date,
-        workspace_id
+        workspace_id,
+        created_at,
+        updated_at
       FROM bikes
     `;
     
@@ -1193,11 +1190,9 @@ export const DatabaseService = {
         image_url,
         image_hint,
         assignment,
-        assigned_case_id,
-        assignment_start_date,
-        assignment_end_date,
-        year,
-        created_date
+        workspace_id,
+        created_at,
+        updated_at
       FROM bikes
       WHERE id = ?
     `);
@@ -1429,6 +1424,27 @@ export const DatabaseService = {
   getCaseDetails: async (caseId: string): Promise<CaseFrontend | null> => {
     ensureServerSide();
     return DatabaseService.getCaseById(caseId);
+  },
+
+  // Async wrapper methods for ISR compatibility
+  getCasesAsync: async (workspaceId?: string | null): Promise<CaseFrontend[]> => {
+    ensureServerSide();
+    return DatabaseService.getAllCases();
+  },
+
+  getBikesAsync: async (workspaceId?: string | null): Promise<BikeFrontend[]> => {
+    ensureServerSide();
+    return DatabaseService.getBikes(workspaceId || undefined);
+  },
+
+  getContactsAsync: async (): Promise<ContactFrontend[]> => {
+    ensureServerSide();
+    return DatabaseService.getAllContacts();
+  },
+
+  getWorkspacesAsync: async (): Promise<WorkspaceFrontend[]> => {
+    ensureServerSide();
+    return DatabaseService.getAllWorkspaces();
   },
 
   createDocumentRecord: async (docData: any): Promise<any> => {
