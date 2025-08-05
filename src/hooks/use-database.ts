@@ -17,25 +17,30 @@ function getUserFromStorage(): any {
   return null;
 }
 
-// Helper function to get auth headers
+// Helper function to get auth headers (always include cookie and user hints when available)
 function getAuthHeaders(user: any): Record<string, string> {
-  // Check if user is null, undefined, or missing required fields
-  if (!user || !user.id || !user.email) {
-    // Fallback to session storage
+  // Try context user, then session storage
+  let effectiveUser = user;
+  if (!effectiveUser || !effectiveUser.id || !effectiveUser.email) {
     const fallbackUser = getUserFromStorage();
     if (fallbackUser && fallbackUser.id && fallbackUser.email) {
       console.log('🔄 Using fallback user for auth headers');
-      user = fallbackUser;
-    } else {
-      console.log('❌ No user available for auth headers (tried fallback)');
-      return {};
+      effectiveUser = fallbackUser;
     }
   }
-  
+
   const headers: Record<string, string> = {};
-  if (user.id) headers['x-user-id'] = user.id;
-  if (user.email) headers['x-user-email'] = user.email;
-  
+  // Prefer cookie-based auth for server routes; include cookie when running in browser
+  if (typeof document !== 'undefined') {
+    const cookie = document.cookie || '';
+    if (cookie.includes('wpa_auth=')) {
+      headers['cookie'] = cookie;
+    }
+  }
+  // Also include user hint headers if we have them (some routes log/expect them)
+  if (effectiveUser?.id) headers['x-user-id'] = effectiveUser.id;
+  if (effectiveUser?.email) headers['x-user-email'] = effectiveUser.email;
+
   console.log('🔑 Auth headers generated:', headers);
   return headers;
 }
@@ -59,7 +64,7 @@ export function useDatabase<T>(endpoint: string, initialData: T[] = []) {
       const headers = getAuthHeaders(effectiveUser);
       console.log(`🔍 [FETCH DEBUG] ${endpoint} - headers being sent:`, headers);
       
-      const response = await fetch(`/api/${endpoint}`, { headers });
+      const response = await fetch(`/api/${endpoint}`, { headers, credentials: 'include' as RequestCredentials });
       if (!response.ok) {
         console.log(`❌ [FETCH DEBUG] ${endpoint} - Response not OK:`, response.status);
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -97,6 +102,7 @@ export function useDatabase<T>(endpoint: string, initialData: T[] = []) {
           'Content-Type': 'application/json',
           ...getAuthHeaders(user),
         },
+        credentials: 'include' as RequestCredentials,
         body: JSON.stringify(item),
       });
       
@@ -121,6 +127,7 @@ export function useDatabase<T>(endpoint: string, initialData: T[] = []) {
           'Content-Type': 'application/json',
           ...getAuthHeaders(user),
         },
+        credentials: 'include' as RequestCredentials,
         body: JSON.stringify(updates),
       });
       
@@ -142,6 +149,7 @@ export function useDatabase<T>(endpoint: string, initialData: T[] = []) {
       const response = await fetch(`/api/${endpoint}/${id}`, {
         method: 'DELETE',
         headers: getAuthHeaders(user),
+        credentials: 'include' as RequestCredentials,
       });
       
       if (!response.ok) {

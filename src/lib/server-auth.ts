@@ -23,16 +23,39 @@ export async function authenticateRequest(request: NextRequest): Promise<AuthRes
     await ensureDatabaseInitialized();
     
     // Get user ID from headers (set by frontend)
-    const userId = request.headers.get('x-user-id');
-    const userEmail = request.headers.get('x-user-email');
+    let userId = request.headers.get('x-user-id');
+    let userEmail = request.headers.get('x-user-email');
     
     // Debug: Log all headers to see what's being sent
     console.log('🔍 [AUTH DEBUG] All headers:', Object.fromEntries(request.headers.entries()));
     console.log('🔍 [AUTH DEBUG] x-user-id:', userId);
     console.log('🔍 [AUTH DEBUG] x-user-email:', userEmail);
     
+    // If no headers, try to get from cookie
     if (!userId && !userEmail) {
-      console.log('❌ [AUTH DEBUG] No authentication headers found');
+      const cookieHeader = request.headers.get('cookie');
+      if (cookieHeader) {
+        // Extract wpa_auth cookie
+        const cookies = cookieHeader.split(';').map(c => c.trim());
+        const wpaCookie = cookies.find(c => c.startsWith('wpa_auth='));
+        
+        if (wpaCookie) {
+          try {
+            // Decode the URL-encoded cookie value
+            const cookieValue = decodeURIComponent(wpaCookie.split('=')[1]);
+            const userData = JSON.parse(cookieValue);
+            userId = userData.id;
+            userEmail = userData.email;
+            console.log('🔑 [AUTH DEBUG] Extracted from cookie:', { userId, userEmail });
+          } catch (error) {
+            console.error('❌ [AUTH DEBUG] Failed to parse wpa_auth cookie:', error);
+          }
+        }
+      }
+    }
+    
+    if (!userId && !userEmail) {
+      console.log('❌ [AUTH DEBUG] No authentication headers or valid cookie found');
       return { success: false, error: 'Authentication required' };
     }
     

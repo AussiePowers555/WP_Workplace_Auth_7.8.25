@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useContacts, useBikes } from "@/hooks/use-database";
 import { useAuth } from "@/context/AuthContext";
-import { authFetch } from "@/lib/auth-fetch";
+import { cookieForwardFetch } from "@/lib/auth-fetch";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -59,7 +59,7 @@ export default function FleetPage() {
       try {
         setCasesLoading(true);
         
-        const response = await authFetch('/api/cases', {}, user);
+        const response = await cookieForwardFetch('/api/cases');
         if (!response.ok) {
           throw new Error('Failed to fetch cases');
         }

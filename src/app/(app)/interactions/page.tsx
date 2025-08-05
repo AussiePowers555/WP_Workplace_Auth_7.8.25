@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import type { CaseFrontend as Case } from "@/lib/database-schema";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
-import { authFetch } from "@/lib/auth-fetch";
+import { cookieForwardFetch } from "@/lib/auth-fetch";
 import { Phone, Mail, User, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 import { Badge } from "@/components/ui/badge";
@@ -42,7 +42,7 @@ export default function AllInteractionsPage() {
     const fetchCases = async () => {
       try {
         setLoading(true);
-        const response = await authFetch('/api/cases', {}, user);
+        const response = await cookieForwardFetch('/api/cases');
         if (!response.ok) {
           throw new Error('Failed to fetch cases');
         }

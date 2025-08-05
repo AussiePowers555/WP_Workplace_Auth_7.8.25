@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import type { CaseFrontend as Case } from "@/lib/database-schema";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/context/AuthContext";
-import { authFetch } from "@/lib/auth-fetch";
+import { cookieForwardFetch } from "@/lib/auth-fetch";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Info, Banknote, CalendarIcon, PiggyBank, FileDigit, Handshake, Landmark, FileWarning, Receipt, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -22,7 +22,7 @@ export default function FinancialsPage() {
     const fetchCases = async () => {
       try {
         setLoading(true);
-        const response = await authFetch('/api/cases', {}, user);
+        const response = await cookieForwardFetch('/api/cases');
         if (!response.ok) {
           throw new Error('Failed to fetch cases');
         }

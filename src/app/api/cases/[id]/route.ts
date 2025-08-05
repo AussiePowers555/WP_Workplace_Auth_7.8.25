@@ -19,7 +19,13 @@ export async function GET(
     const { user } = authResult;
     const { id } = context.params;
     
-    const caseData = DatabaseService.getCaseById(id);
+    // Try to get case by ID first, then by case number if not found
+    let caseData = DatabaseService.getCaseById(id);
+    if (!caseData) {
+      // Try by case number
+      caseData = DatabaseService.getCaseByCaseNumber(id);
+    }
+    
     if (!caseData) {
       return NextResponse.json({ error: 'Case not found' }, { status: 404 });
     }
@@ -54,7 +60,12 @@ export async function PUT(
     const { id } = context.params;
     
     // First check if case exists and user can access it
-    const caseData = DatabaseService.getCaseById(id);
+    let caseData = DatabaseService.getCaseById(id);
+    if (!caseData) {
+      // Try by case number
+      caseData = DatabaseService.getCaseByCaseNumber(id);
+    }
+    
     if (!caseData) {
       return NextResponse.json({ error: 'Case not found' }, { status: 404 });
     }
@@ -70,7 +81,8 @@ export async function PUT(
       return NextResponse.json({ error: 'Cannot modify workspace assignment' }, { status: 403 });
     }
     
-    DatabaseService.updateCase(id, updates);
+    // Use the actual database ID for the update, not the parameter which might be case number
+    DatabaseService.updateCase(caseData.id, updates);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error updating case:', error);
@@ -100,7 +112,19 @@ export async function DELETE(
     }
 
     const { id } = context.params;
-    DatabaseService.deleteCase(id);
+    
+    // First check if case exists
+    let caseData = DatabaseService.getCaseById(id);
+    if (!caseData) {
+      // Try by case number
+      caseData = DatabaseService.getCaseByCaseNumber(id);
+    }
+    
+    if (!caseData) {
+      return NextResponse.json({ error: 'Case not found' }, { status: 404 });
+    }
+    
+    DatabaseService.deleteCase(caseData.id);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting case:', error);

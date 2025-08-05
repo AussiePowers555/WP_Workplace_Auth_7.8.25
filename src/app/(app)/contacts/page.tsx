@@ -13,7 +13,7 @@ import { useContacts } from "@/hooks/use-database";
 import { useToast } from "@/hooks/use-toast";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
-import { authFetch } from "@/lib/auth-fetch";
+import { cookieForwardFetch } from "@/lib/auth-fetch";
 
 export default function ContactsPage() {
     const { toast } = useToast();
@@ -49,7 +49,7 @@ export default function ContactsPage() {
     const handleDeleteContact = async (id: string) => {
         if (!confirm("Are you sure you want to delete this contact?")) return;
         try {
-            const response = await authFetch(`/api/contacts/${id}`, { method: "DELETE" }, user);
+            const response = await cookieForwardFetch(`/api/contacts/${id}`, { method: "DELETE" });
             if (!response.ok) {
                 throw new Error('Failed to delete contact');
             }

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import type { CaseFrontend as Case, ContactFrontend as Contact } from "@/lib/database-schema";
 import type { BikeFrontend } from "@/lib/database-schema";
+import { useAuth } from "@/context/AuthContext";
+import { cookieForwardFetch } from "@/lib/auth-fetch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Bike as BikeIcon, FileText, PenTool } from "lucide-react";
@@ -22,11 +23,12 @@ import PdfViewer from "./pdf-viewer";
 import DocumentUpload from "./document-upload";
 import RequireWorkspace from "@/components/RequireWorkspace";
 
-export default function CaseDetailPage() {
+export default function CasePage() {
   const params = useParams();
   const router = useRouter();
   const caseId = params.caseId as string;
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const [bikes] = useLocalStorage<BikeFrontend[]>("bikes", []);
   const [contacts, setContacts] = useLocalStorage<Contact[]>("contacts", []);
@@ -50,10 +52,12 @@ export default function CaseDetailPage() {
       setError(null);
 
       try {
-        // Directly fetch case by ID
-        const caseResponse = await fetch(`/api/cases/${caseId}`);
+        // Use cookieForwardFetch which automatically handles authentication
+        const caseResponse = await cookieForwardFetch(`/api/cases/${caseId}`, {
+          cache: 'no-store',
+        });
         if (!caseResponse.ok) {
-          setError('Case not found');
+          setError(caseResponse.status === 401 ? 'Unauthorized. Please re-login.' : 'Case not found');
           setLoading(false);
           return;
         }
@@ -74,8 +78,14 @@ export default function CaseDetailPage() {
       }
     };
 
-    fetchCaseData();
-  }, [caseId, bikes]);
+    // Only fetch if user is available
+    if (user) {
+      fetchCaseData();
+    } else {
+      setLoading(false);
+      setError('Please log in to view case details');
+    }
+  }, [caseId, bikes, user]);
 
   const handleCaseUpdate = async (updatedData: Partial<Case>) => {
     if (!caseData) return;
@@ -87,7 +97,7 @@ export default function CaseDetailPage() {
     };
 
     try {
-      const response = await fetch(`/api/cases/${caseData.id}`, {
+      const response = await cookieForwardFetch(`/api/cases/${caseData.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -270,10 +280,10 @@ export default function CaseDetailPage() {
         <Button variant={displaySection === 'gallery' ? 'secondary' : 'ghost'} onClick={() => setDisplaySection('gallery')}>
           Gallery
         </Button>
-         <Button variant={displaySection === 'pdfs' ? 'secondary' : 'ghost'} onClick={() => setDisplaySection('pdfs')}>
+          <Button variant={displaySection === 'pdfs' ? 'secondary' : 'ghost'} onClick={() => setDisplaySection('pdfs')}>
           PDFs
         </Button>
-         <Button variant={displaySection === 'upload' ? 'secondary' : 'ghost'} onClick={() => setDisplaySection('upload')}>
+          <Button variant={displaySection === 'upload' ? 'secondary' : 'ghost'} onClick={() => setDisplaySection('upload')}>
           Upload
         </Button>
         <Button

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useLocalStorage } from "@/hooks/use-local-storage";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
-import { authFetch } from "@/lib/auth-fetch";
+import { cookieForwardFetch } from "@/lib/auth-fetch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -40,7 +40,7 @@ export default function CommitmentsPage() {
     const fetchCases = async () => {
       try {
         setCasesLoading(true);
-        const response = await authFetch('/api/cases', {}, user);
+        const response = await cookieForwardFetch('/api/cases');
         if (!response.ok) {
           throw new Error('Failed to fetch cases');
         }
