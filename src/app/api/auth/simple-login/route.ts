@@ -47,8 +47,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (!auth.success || !auth.user) {
-      return NextResponse.json({ success: false, error: 'Invalid email or password' }, { status: 401 });
+      return NextResponse.json({ success: false, error: auth.error || 'Invalid email or password' }, { status: 401 });
     }
+
+    // Check if user needs to change password
+    const needsPasswordChange = (auth.user as any).status === 'pending_password_change';
 
     // Issue httpOnly cookie for middleware-based SSR gating
     const res = NextResponse.json({
@@ -58,6 +61,8 @@ export async function POST(request: NextRequest) {
         email: auth.user.email,
         role: (auth.user as any).role,
         name: (auth.user as any).name ?? 'User',
+        workspaceId: (auth.user as any).workspace_id || null,
+        needsPasswordChange,
       },
     });
 

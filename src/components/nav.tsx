@@ -39,16 +39,16 @@ const mainNavItems = [
     { href: "/cases", label: "Case Management", icon: Briefcase, adminOnly: false },
     { href: "/fleet", label: "Fleet Tracking", icon: Bike, adminOnly: true },
     { href: "/financials", label: "Financials", icon: Banknote, adminOnly: true },
-    { href: "/commitments", label: "Commitments", icon: ClipboardCheck, adminOnly: true },
+    { href: "/commitments", label: "Commitments", icon: ClipboardCheck, adminOnly: false },
     { href: "/contacts", label: "Contacts", icon: Contact, adminOnly: true },
     { href: "/documents", label: "Documents", icon: FileText, adminOnly: false },
     { href: "/interactions", label: "Interactions", icon: MessageSquare, adminOnly: false },
     { href: "/ai-email", label: "AI Email", icon: Mail, adminOnly: true },
+    { href: "/users", label: "User Management", icon: Users, adminOnly: true },
 ]
 
 const settingsNavItems = [
     { href: "/admin", label: "Admin Dashboard", icon: Shield, adminOnly: true },
-    { href: "/admin/users", label: "User Management", icon: Users, adminOnly: true },
     { href: "/subscriptions", label: "Subscriptions", icon: Gem, adminOnly: true },
     { href: "/settings", label: "Settings", icon: Settings, adminOnly: false },
 ]
@@ -56,7 +56,8 @@ const settingsNavItems = [
 export function Nav() {
     const [currentUser] = useSessionStorage<any>("currentUser", null);
     const { role } = useWorkspace();
-    const isAdmin = role === "admin";
+    const isAdmin = role === "admin" || role === "developer";  // Developers have admin access
+    const isWorkspaceUser = role === 'workspace_user';  // Only workspace_user role is restricted
     const pathname = usePathname()
 
     const rentalAgreementRegex = /^\/rental-agreement\/.*/;
@@ -75,11 +76,11 @@ export function Nav() {
                 <SidebarMenu>
                     {mainNavItems
                         .filter(item => {
-                            // For workspace users, only show specific items
-                            if (role === 'workspace') {
-                                return ['Case Management'].includes(item.label);
+                            // Only workspace_user role has restrictions
+                            if (isWorkspaceUser) {
+                                return ['Case Management', 'Commitments', 'Documents'].includes(item.label);
                             }
-                            // For admins, respect adminOnly flag
+                            // For admins and developers, show everything marked for admin
                             return !item.adminOnly || isAdmin;
                         })
                         .map((item) => (
@@ -103,11 +104,11 @@ export function Nav() {
                     <SidebarMenu>
                         {settingsNavItems
                             .filter(item => {
-                                // For workspace users, hide all settings
-                                if (role === 'workspace') {
+                                // Only workspace_user role has no settings access
+                                if (isWorkspaceUser) {
                                     return false;
                                 }
-                                // For admins, respect adminOnly flag
+                                // For admins and developers, show admin items
                                 return !item.adminOnly || isAdmin;
                             })
                             .map((item) => (

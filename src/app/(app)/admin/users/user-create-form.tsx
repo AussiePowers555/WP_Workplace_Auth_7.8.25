@@ -53,7 +53,10 @@ export default function UserCreateForm({ onClose, onUserCreated }: UserCreateFor
     try {
       const response = await fetch('/api/workspaces');
       const data = await response.json();
-      if (data.success) {
+      // API returns array directly, not wrapped in success/data
+      if (Array.isArray(data)) {
+        setWorkspaces(data);
+      } else if (data.success) {
         setWorkspaces(data.workspaces || []);
       }
     } catch (err) {
@@ -65,7 +68,10 @@ export default function UserCreateForm({ onClose, onUserCreated }: UserCreateFor
     try {
       const response = await fetch('/api/contacts');
       const data = await response.json();
-      if (data.success) {
+      // API returns array directly, not wrapped in success/data
+      if (Array.isArray(data)) {
+        setContacts(data);
+      } else if (data.success) {
         setContacts(data.contacts || []);
       }
     } catch (err) {
@@ -84,8 +90,8 @@ export default function UserCreateForm({ onClose, onUserCreated }: UserCreateFor
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          workspace_id: formData.workspace_id || null,
-          contact_id: formData.contact_id || null
+          workspace_id: formData.workspace_id === 'none' || !formData.workspace_id ? null : formData.workspace_id,
+          contact_id: formData.contact_id === 'none' || !formData.contact_id ? null : formData.contact_id
         })
       });
 
@@ -175,7 +181,6 @@ export default function UserCreateForm({ onClose, onUserCreated }: UserCreateFor
               <Select
                 value={formData.role}
                 onValueChange={(value) => setFormData({ ...formData, role: value })}
-                required
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a role" />
@@ -200,7 +205,7 @@ export default function UserCreateForm({ onClose, onUserCreated }: UserCreateFor
                   <SelectValue placeholder="Select a workspace" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No workspace restriction</SelectItem>
+                  <SelectItem value="none">No workspace restriction</SelectItem>
                   {workspaces.map((workspace) => (
                     <SelectItem key={workspace.id} value={workspace.id}>
                       {workspace.name}
@@ -223,7 +228,7 @@ export default function UserCreateForm({ onClose, onUserCreated }: UserCreateFor
                   <SelectValue placeholder="Select a contact" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">No associated contact</SelectItem>
+                  <SelectItem value="none">No associated contact</SelectItem>
                   {contacts.map((contact) => (
                     <SelectItem key={contact.id} value={contact.id}>
                       {contact.name} {contact.company && `(${contact.company})`} - {contact.type}

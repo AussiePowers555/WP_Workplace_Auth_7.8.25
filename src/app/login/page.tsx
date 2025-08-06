@@ -1,13 +1,21 @@
 "use client";
 
+import { useState } from "react";
+
 export default function LoginPage() {
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [userEmail, setUserEmail] = useState("");
+  const [tempPassword, setTempPassword] = useState("");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const form = e.target as HTMLFormElement;
-    const formData = new FormData(form);
-    const email = formData.get("email") as string;
-    const password = formData.get("password") as string;
+    const email = loginEmail.trim();
+    const password = loginPassword.trim();
 
     const messageDiv = document.getElementById("message");
     const submitBtn = document.getElementById("submitBtn") as HTMLButtonElement;
@@ -29,7 +37,19 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok || !data?.success) {
-        if (messageDiv) messageDiv.textContent = "❌ Invalid credentials.";
+        if (messageDiv) messageDiv.textContent = `❌ ${data?.error || 'Invalid credentials.'}`;
+        if (submitBtn) submitBtn.disabled = false;
+        return;
+      }
+
+      // Check if password change is required
+      if (data.user.needsPasswordChange) {
+        setUserEmail(email);
+        setTempPassword(password);
+        setNewPassword("");
+        setConfirmPassword("");
+        setShowPasswordChange(true);
+        if (messageDiv) messageDiv.style.display = "none";
         if (submitBtn) submitBtn.disabled = false;
         return;
       }
@@ -40,7 +60,7 @@ export default function LoginPage() {
         email: data.user.email,
         name: data.user.name ?? "User",
         role: data.user.role ?? "user",
-        workspaceId: null,
+        workspaceId: data.user.workspaceId || null,
       };
       sessionStorage.setItem("currentUser", JSON.stringify(userData));
       window.dispatchEvent(
@@ -72,12 +92,235 @@ export default function LoginPage() {
     }
   };
 
-  const autoFillDev1 = () => {
-    const emailInput = document.getElementById("email") as HTMLInputElement;
-    const passwordInput = document.getElementById("password") as HTMLInputElement;
-    if (emailInput) emailInput.value = "whitepointer2016@gmail.com";
-    if (passwordInput) passwordInput.value = "Tr@ders84";
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const messageDiv = document.getElementById("changeMessage");
+    const submitBtn = document.getElementById("changeSubmitBtn") as HTMLButtonElement;
+
+    if (newPassword !== confirmPassword) {
+      if (messageDiv) {
+        messageDiv.textContent = "❌ Passwords do not match.";
+        messageDiv.style.display = "block";
+      }
+      return;
+    }
+
+    // Validate password requirements
+    const passwordErrors = [];
+    if (newPassword.length < 8) {
+      passwordErrors.push("at least 8 characters");
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      passwordErrors.push("one uppercase letter");
+    }
+    if (!/[a-z]/.test(newPassword)) {
+      passwordErrors.push("one lowercase letter");
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      passwordErrors.push("one number");
+    }
+    if (!/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)) {
+      passwordErrors.push("one special character");
+    }
+    
+    if (passwordErrors.length > 0) {
+      if (messageDiv) {
+        messageDiv.textContent = `❌ Password must contain: ${passwordErrors.join(", ")}`;
+        messageDiv.style.display = "block";
+      }
+      return;
+    }
+
+    if (messageDiv) {
+      messageDiv.textContent = "Updating password...";
+      messageDiv.style.display = "block";
+    }
+    if (submitBtn) submitBtn.disabled = true;
+
+    try {
+      // First change the password
+      const changeRes = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          email: userEmail,
+          oldPassword: tempPassword,
+          newPassword 
+        }),
+      });
+
+      const changeData = await changeRes.json();
+
+      if (!changeRes.ok || !changeData?.success) {
+        const errorMsg = changeData?.error || "Failed to update password";
+        if (messageDiv) messageDiv.textContent = `❌ ${errorMsg}`;
+        if (submitBtn) submitBtn.disabled = false;
+        console.error('Password change failed:', changeData);
+        return;
+      }
+
+      // Now login with the new password
+      const loginRes = await fetch("/api/auth/simple-login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: userEmail, password: newPassword }),
+      });
+
+      const loginData = await loginRes.json();
+
+      if (loginRes.ok && loginData?.success) {
+        // Store user data
+        const userData = {
+          id: loginData.user.id,
+          email: loginData.user.email,
+          name: loginData.user.name ?? "User",
+          role: loginData.user.role ?? "user",
+          workspaceId: loginData.user.workspaceId || null,
+        };
+        sessionStorage.setItem("currentUser", JSON.stringify(userData));
+        window.dispatchEvent(
+          new CustomEvent("sessionStorageChange", {
+            detail: { key: "currentUser", value: userData },
+          })
+        );
+
+        if (messageDiv) messageDiv.textContent = "✅ Password updated! Redirecting...";
+
+        // Redirect to dashboard
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 1000);
+      } else {
+        if (messageDiv) messageDiv.textContent = "❌ Failed to login after password change.";
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    } catch (err) {
+      console.error("Password change error:", err);
+      if (messageDiv) messageDiv.textContent = "❌ Failed to update password.";
+      if (submitBtn) submitBtn.disabled = false;
+    }
   };
+
+  const autoFillDev1 = () => {
+    setLoginEmail("whitepointer2016@gmail.com");
+    setLoginPassword("Tr@ders84");
+  };
+
+  if (showPasswordChange) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#f9fafb", padding: "20px" }}>
+        <div style={{ width: "100%", maxWidth: "400px", backgroundColor: "white", padding: "40px", borderRadius: "8px", boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)" }}>
+          <div style={{ textAlign: "center", marginBottom: "30px" }}>
+            <h1 style={{ fontSize: "24px", fontWeight: "bold", marginBottom: "8px" }}>Change Your Password</h1>
+            <p style={{ color: "#666", fontSize: "14px" }}>You must change your temporary password before continuing</p>
+          </div>
+
+          <form onSubmit={handlePasswordChange} style={{ marginBottom: "20px" }}>
+            <div style={{ marginBottom: "16px" }}>
+              <label style={{ display: "block", marginBottom: "6px", fontWeight: "500" }}>Email</label>
+              <input
+                type="email"
+                value={userEmail}
+                disabled
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  border: "1px solid #ddd",
+                  borderRadius: "4px",
+                  fontSize: "14px",
+                  boxSizing: "border-box",
+                  backgroundColor: "#f5f5f5",
+                  cursor: "not-allowed"
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: "16px" }}>
+              <label htmlFor="newPassword" style={{ display: "block", marginBottom: "6px", fontWeight: "500" }}>New Password</label>
+              <input
+                id="newPassword"
+                name="newPassword"
+                type="password"
+                placeholder="Enter your new password"
+                required
+                minLength={8}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  border: "1px solid #ddd",
+                  borderRadius: "4px",
+                  fontSize: "14px",
+                  boxSizing: "border-box"
+                }}
+              />
+              <div style={{ fontSize: "11px", color: "#666", marginTop: "4px" }}>
+                <p style={{ marginBottom: "2px" }}>Password must contain:</p>
+                <ul style={{ marginLeft: "16px", marginTop: "2px" }}>
+                  <li>At least 8 characters</li>
+                  <li>One uppercase letter (A-Z)</li>
+                  <li>One lowercase letter (a-z)</li>
+                  <li>One number (0-9)</li>
+                  <li>One special character (!@#$%^&*)</li>
+                </ul>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: "20px" }}>
+              <label htmlFor="confirmPassword" style={{ display: "block", marginBottom: "6px", fontWeight: "500" }}>Confirm New Password</label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                placeholder="Confirm your new password"
+                required
+                minLength={8}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                style={{
+                  width: "100%",
+                  padding: "10px",
+                  border: "1px solid #ddd",
+                  borderRadius: "4px",
+                  fontSize: "14px",
+                  boxSizing: "border-box"
+                }}
+              />
+            </div>
+
+            <button
+              id="changeSubmitBtn"
+              type="submit"
+              style={{
+                width: "100%",
+                padding: "12px",
+                backgroundColor: "#3b82f6",
+                color: "white",
+                border: "none",
+                borderRadius: "4px",
+                fontSize: "16px",
+                fontWeight: "500",
+                cursor: "pointer"
+              }}
+            >
+              Update Password
+            </button>
+          </form>
+
+          <div id="changeMessage" style={{
+            padding: "12px",
+            backgroundColor: "#f3f4f6",
+            borderRadius: "4px",
+            fontSize: "14px",
+            marginTop: "16px",
+            display: "none"
+          }}></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#f9fafb", padding: "20px" }}>
@@ -96,6 +339,8 @@ export default function LoginPage() {
               type="email"
               placeholder="Enter your email"
               required
+              value={loginEmail}
+              onChange={(e) => setLoginEmail(e.target.value)}
               style={{
                 width: "100%",
                 padding: "10px",
@@ -115,6 +360,8 @@ export default function LoginPage() {
               type="password"
               placeholder="Enter your password"
               required
+              value={loginPassword}
+              onChange={(e) => setLoginPassword(e.target.value)}
               style={{
                 width: "100%",
                 padding: "10px",
@@ -149,34 +396,28 @@ export default function LoginPage() {
           padding: "12px",
           backgroundColor: "#f3f4f6",
           borderRadius: "4px",
-          marginBottom: "20px",
           fontSize: "14px",
           display: "none"
-        }}>
-        </div>
+        }}></div>
 
-        <div style={{ paddingTop: "20px", borderTop: "1px solid #e5e7eb" }}>
-          <p style={{ fontSize: "14px", fontWeight: "500", marginBottom: "12px" }}>Test Account:</p>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "12px", color: "#666" }}>
-            <div>
-              <p><strong>Email:</strong> whitepointer2016@gmail.com</p>
-              <p><strong>Password:</strong> Tr@ders84</p>
-            </div>
-            <button
-              type="button"
-              onClick={autoFillDev1}
-              style={{
-                padding: "6px 12px",
-                border: "1px solid #ddd",
-                backgroundColor: "white",
-                borderRadius: "4px",
-                fontSize: "12px",
-                cursor: "pointer"
-              }}
-            >
-              Auto-fill
-            </button>
-          </div>
+        <div style={{ borderTop: "1px solid #e5e7eb", marginTop: "24px", paddingTop: "24px" }}>
+          <p style={{ fontSize: "12px", color: "#999", textAlign: "center", marginBottom: "12px" }}>Quick access for development:</p>
+          <button
+            type="button"
+            onClick={autoFillDev1}
+            style={{
+              width: "100%",
+              padding: "10px",
+              backgroundColor: "#f3f4f6",
+              color: "#333",
+              border: "1px solid #e5e7eb",
+              borderRadius: "4px",
+              fontSize: "14px",
+              cursor: "pointer"
+            }}
+          >
+            Fill Developer Credentials
+          </button>
         </div>
       </div>
     </div>

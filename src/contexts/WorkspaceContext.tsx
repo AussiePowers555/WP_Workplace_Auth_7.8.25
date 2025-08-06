@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { useSessionStorage } from '@/hooks/use-session-storage';
 import { useToast } from '@/hooks/use-toast';
 
-export type WorkspaceRole = 'admin' | 'workspace';
+export type WorkspaceRole = 'admin' | 'workspace' | 'workspace_user' | 'developer' | 'lawyer' | 'rental_company';
 
 export interface WorkspaceContextValue {
   id?: string;
@@ -33,8 +33,9 @@ export function WorkspaceProvider({
   initialWorkspaceName = 'Main Workspace',
   initialContactType
 }: WorkspaceProviderProps) {
+  const [currentUser] = useSessionStorage<any>('currentUser', null);
   const [activeWorkspace, setActiveWorkspace] = useSessionStorage<string | null>('activeWorkspace', initialWorkspaceId || null);
-  const [role, setRole] = useSessionStorage<WorkspaceRole>('role', initialRole);
+  const [role, setRole] = useSessionStorage<WorkspaceRole>('role', currentUser?.role || initialRole);
   const [workspaceName, setWorkspaceName] = useSessionStorage<string>('workspaceName', initialWorkspaceName);
   const [contactType, setContactType] = useSessionStorage<string | undefined>('contactType', initialContactType);
   const [isLoading, setIsLoading] = useState(false);
@@ -97,6 +98,18 @@ export function WorkspaceProvider({
       setContactType(undefined);
     }
   }, [activeWorkspace, setWorkspaceName, setContactType]);
+  
+  // Update role when current user changes
+  useEffect(() => {
+    if (currentUser?.role) {
+      setRole(currentUser.role);
+      
+      // If user is workspace_user, set their workspace as active
+      if (currentUser.role === 'workspace_user' && currentUser.workspaceId) {
+        setActiveWorkspace(currentUser.workspaceId);
+      }
+    }
+  }, [currentUser, setRole, setActiveWorkspace]);
   
   // Cleanup toast timer on unmount
   useEffect(() => {

@@ -983,22 +983,59 @@ export const DatabaseService = {
   createUserAccount: (userData: any): UserAccount => {
     ensureServerSide();
     const id = `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const now = new Date().toISOString();
+
+    // Ensure all values are properly defined (SQLite doesn't accept undefined)
+    const first_login = userData.first_login !== undefined ? userData.first_login : 0;
+    const remember_login = userData.remember_login !== undefined ? userData.remember_login : 0;
+    const contact_id = userData.contact_id || null;
+    const workspace_id = userData.workspace_id || null;
+    const status = userData.status || 'active';
 
     const stmt = db.prepare(`
-      INSERT INTO user_accounts (id, email, password_hash, role, status, contact_id, workspace_id, first_login, remember_login)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO user_accounts (id, email, password_hash, role, status, contact_id, workspace_id, first_login, remember_login, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    stmt.run(id, userData.email, userData.password_hash, userData.role,
-             userData.status, userData.contact_id, userData.workspace_id, userData.first_login, userData.remember_login);
+    stmt.run(
+      id, 
+      userData.email, 
+      userData.password_hash, 
+      userData.role,
+      status, 
+      contact_id, 
+      workspace_id, 
+      first_login ? 1 : 0,  // Convert boolean to integer for SQLite
+      remember_login ? 1 : 0,  // Convert boolean to integer for SQLite
+      now
+    );
 
-    return { id, ...userData };
+    return { 
+      id, 
+      ...userData, 
+      status,
+      contact_id,
+      workspace_id,
+      first_login,
+      remember_login,
+      created_at: now 
+    };
   },
 
   getUserByEmail: (email: string): UserAccount | null => {
     ensureServerSide();
-    const stmt = db.prepare('SELECT * FROM user_accounts WHERE email = ?');
+    // Case-insensitive email comparison using LOWER()
+    const stmt = db.prepare('SELECT * FROM user_accounts WHERE LOWER(email) = LOWER(?)');
     return stmt.get(email);
+  },
+
+  validateUser: async (email: string, passwordHash: string): Promise<boolean> => {
+    ensureServerSide();
+    const user = DatabaseService.getUserByEmail(email);
+    if (!user) {
+      return false;
+    }
+    return user.password_hash === passwordHash;
   },
 
   updateUserAccount: (id: string, updates: any): void => {
@@ -1014,6 +1051,18 @@ export const DatabaseService = {
     `);
 
     stmt.run(...values, id);
+  },
+  
+  getUserById: (id: string): UserAccount | null => {
+    ensureServerSide();
+    const stmt = db.prepare('SELECT * FROM user_accounts WHERE id = ?');
+    return stmt.get(id);
+  },
+  
+  updateUserStatus: (id: string, status: string): void => {
+    ensureServerSide();
+    const stmt = db.prepare('UPDATE user_accounts SET status = ? WHERE id = ?');
+    stmt.run(status, id);
   },
 
   // Signature Token methods

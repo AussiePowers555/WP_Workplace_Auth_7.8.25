@@ -21,8 +21,8 @@ export const generateRandomPassword = (): string => {
 export const validatePassword = (password: string): { valid: boolean; errors: string[] } => {
   const errors: string[] = [];
   
-  if (password.length < 10) {
-    errors.push('Password must be at least 10 characters long');
+  if (password.length < 8) {
+    errors.push('Password must be at least 8 characters long');
   }
   
   if (!/[A-Z]/.test(password)) {
@@ -160,13 +160,13 @@ export const authenticateUser = async (email: string, password: string): Promise
 };
 
 // Change password
-export const changePassword = (userId: string, newPassword: string): boolean => {
+export const changePassword = async (userId: string, newPassword: string): Promise<boolean> => {
   try {
     DatabaseService.updateUserAccount(userId, {
       password_hash: hashPassword(newPassword),
       status: 'active',
-      first_login: false,
-      updated_at: new Date() as any
+      first_login: 0,
+      updated_at: new Date().toISOString()
     });
     return true;
   } catch (error) {

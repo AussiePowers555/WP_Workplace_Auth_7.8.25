@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PlusIcon, SearchIcon, EditIcon, TrashIcon, MailIcon } from 'lucide-react';
-import UserCreateForm from './user-create-form';
+import Link from 'next/link';
 
 interface User {
   id: string;
@@ -23,7 +23,6 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [showCreateForm, setShowCreateForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const filteredUsers = Array.isArray(users) ? users.filter(user =>
@@ -66,10 +65,6 @@ export default function UsersPage() {
     fetchUsers();
   }, []);
 
-  const handleUserCreated = () => {
-    setShowCreateForm(false);
-    fetchUsers();
-  };
 
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
@@ -153,10 +148,12 @@ export default function UsersPage() {
             Manage user accounts and permissions for the PBike Rescue system
           </p>
         </div>
-        <Button onClick={() => setShowCreateForm(true)}>
-          <PlusIcon className="w-4 h-4 mr-2" />
-          Add User
-        </Button>
+        <Link href="/users/new">
+          <Button>
+            <PlusIcon className="w-4 h-4 mr-2" />
+            Add User
+          </Button>
+        </Link>
       </div>
 
       {error && (
@@ -256,12 +253,6 @@ export default function UsersPage() {
         </CardContent>
       </Card>
 
-      {showCreateForm && (
-        <UserCreateForm
-          onClose={() => setShowCreateForm(false)}
-          onUserCreated={handleUserCreated}
-        />
-      )}
     </div>
   );
 }

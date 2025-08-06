@@ -9,6 +9,11 @@ export default function AppSegmentError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  // Log the error for debugging
+  React.useEffect(() => {
+    console.error('App Error Boundary caught:', error);
+  }, [error]);
+  
   return (
     <div className="min-h-[60vh] flex items-center justify-center bg-gray-50 p-6">
       <div className="w-full max-w-xl bg-white rounded-lg shadow-lg p-6 border border-gray-100">

@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { DatabaseService, ensureDatabaseInitialized } from '@/lib/database';
-import crypto from 'crypto';
+import CryptoJS from 'crypto-js';
+import UserCreationValidator from '@/lib/user-creation-validator';
 
-// Simple password hashing for now (in production, use bcrypt)
+// Password hashing utility - must match user-auth.ts
 function hashPassword(password: string): string {
-  return crypto.createHash('sha256').update(password).digest('hex');
+  return CryptoJS.SHA256(password + 'salt_pbr_2024').toString();
 }
 
 function generateRandomPassword(): string {
@@ -41,7 +42,18 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, role, workspace_id, contact_id, send_email } = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      return NextResponse.json(
+        { success: false, error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+    
+    const { email, role, workspace_id, contact_id, send_email, password } = body;
     
     if (!email || !role) {
       return NextResponse.json(
@@ -61,20 +73,42 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Generate random password
-    const tempPassword = generateRandomPassword();
+    // Use provided password or generate random password
+    const tempPassword = password || generateRandomPassword();
     
-    // Create user
-    const newUser = DatabaseService.createUserAccount({
+    console.log(`Creating user ${email} with temporary password: ${tempPassword}`);
+    
+    // Create user with validation to ensure password works
+    const createResult = await UserCreationValidator.createUserWithValidation({
       email,
-      password_hash: hashPassword(tempPassword),
+      password: tempPassword,
       role,
-      status: 'pending_password_change',
-      contact_id: contact_id || null,
       workspace_id: workspace_id || null,
-      first_login: false,
-      remember_login: false
+      contact_id: contact_id || null
     });
+    
+    if (!createResult.success) {
+      console.error('User creation validation failed:', createResult.message);
+      return NextResponse.json(
+        { success: false, error: createResult.message },
+        { status: 400 }
+      );
+    }
+    
+    // Get the created user for response
+    const newUser = DatabaseService.getUserByEmail(email);
+    if (!newUser) {
+      return NextResponse.json(
+        { success: false, error: 'User created but not found in database' },
+        { status: 500 }
+      );
+    }
+    
+    // Log successful creation with verification
+    console.log(`✅ User ${email} created successfully and login verified`);
+    console.log(`   Password: ${tempPassword} (verified working)`);
+    console.log(`   Role: ${role}`);
+    console.log(`   Workspace: ${workspace_id || 'none'}`);
     
     // Send email if requested
     let emailSent = false;
@@ -90,6 +124,9 @@ export async function POST(request: NextRequest) {
           })
         });
         emailSent = emailResponse.ok;
+        if (emailSent) {
+          console.log(`📧 Credentials sent to ${email}`);
+        }
       } catch (emailError) {
         console.error('Failed to send email:', emailError);
       }
@@ -97,7 +134,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({
       success: true,
-      message: 'User created successfully',
+      message: 'User created and login verified successfully',
       user: {
         id: newUser.id,
         email: newUser.email,
@@ -110,12 +147,17 @@ export async function POST(request: NextRequest) {
         email,
         password: tempPassword
       },
-      email_sent: emailSent
+      email_sent: emailSent,
+      validation: {
+        passwordVerified: true,
+        canLogin: true
+      }
     });
   } catch (error) {
     console.error('Error creating user:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { success: false, error: 'Failed to create user' },
+      { success: false, error: `Failed to create user: ${errorMessage}` },
       { status: 500 }
     );
   }
