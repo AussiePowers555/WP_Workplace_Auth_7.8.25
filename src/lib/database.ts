@@ -2,12 +2,21 @@
 let Database: any;
 let path: any;
 let fs: any;
+let postgresPool: any;
+let postgresInit: any;
+let postgresQuery: any;
 
 // Only import on server side
 if (typeof window === 'undefined') {
   Database = require('better-sqlite3');
   path = require('path');
   fs = require('fs');
+  
+  // Import PostgreSQL functions if available
+  const postgres = require('./database-postgres');
+  postgresPool = postgres.getPostgresPool;
+  postgresInit = postgres.initializePostgresDatabase;
+  postgresQuery = postgres.queryPostgres;
 }
 // Import from unified schema - SINGLE SOURCE OF TRUTH
 import type {
@@ -45,6 +54,7 @@ if (typeof window === 'undefined' && path && fs) {
 let db: any;
 let isInitializing = false;
 let initializationPromise: Promise<any> | null = null;
+let dbType: 'sqlite' | 'postgres' = 'sqlite';
 
 // Initialize database with tables
 export function initializeDatabase() {
@@ -65,6 +75,33 @@ export function initializeDatabase() {
     return initializationPromise;
   }
   
+  // Check if PostgreSQL is available (Railway provides DATABASE_URL)
+  if (process.env.DATABASE_URL && postgresPool && postgresPool()) {
+    dbType = 'postgres';
+    console.log('🐘 Using PostgreSQL database');
+    
+    // Mark as initializing
+    isInitializing = true;
+    
+    initializationPromise = (async () => {
+      try {
+        await postgresInit();
+        db = postgresPool();
+        console.log('✅ PostgreSQL database initialized successfully');
+        isInitializing = false;
+        return db;
+      } catch (error) {
+        isInitializing = false;
+        initializationPromise = null;
+        console.error('❌ PostgreSQL initialization failed:', error);
+        throw error;
+      }
+    })();
+    
+    return initializationPromise;
+  }
+  
+  // Fall back to SQLite
   if (!Database || !DB_PATH) {
     throw new Error('Database modules not available - ensure running server-side');
   }
