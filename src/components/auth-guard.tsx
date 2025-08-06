@@ -1,66 +1,60 @@
-"use client";
+'use client';
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useSessionStorage } from "@/hooks/use-session-storage";
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
-interface AuthGuardProps {
-  children: React.ReactNode;
-}
-
-export function AuthGuard({ children }: AuthGuardProps) {
-  const [currentUser] = useSessionStorage<any>("currentUser", null);
+export default function AuthGuard({ children }: { children: React.ReactNode }) {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [redirecting, setRedirecting] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    // Faster loading resolution
-    const timer = setTimeout(() => {
-      if (!currentUser && !redirecting) {
-        console.log('AuthGuard: No user found, redirecting to login');
-        setRedirecting(true);
-        router.push("/login");
-      } else if (currentUser) {
-        console.log('AuthGuard: User authenticated:', currentUser.email);
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/simple-login', {
+          method: 'GET',
+          credentials: 'include',
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setIsAuthenticated(!!data.user);
+        } else {
+          setIsAuthenticated(false);
+        }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        setIsAuthenticated(false);
+      } finally {
         setIsLoading(false);
       }
-    }, 50); // Very short delay to prevent flicker
+    };
 
-    return () => clearTimeout(timer);
-  }, [currentUser, router, redirecting]);
+    checkAuth();
+  }, [mounted]);
 
-  // Immediate check for existing user to skip loading state
   useEffect(() => {
-    if (currentUser) {
-      setIsLoading(false);
+    if (!mounted || isLoading) return;
+
+    if (!isAuthenticated) {
+      console.log('AuthGuard: No user found, redirecting to login');
+      router.push('/simple-login');
     }
-  }, [currentUser]);
+  }, [isAuthenticated, isLoading, router, mounted]);
 
-  if (redirecting) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600 text-sm">Redirecting to login...</p>
-        </div>
-      </div>
-    );
+  if (!mounted || isLoading) {
+    return <div>Loading...</div>;
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-2 text-gray-600 text-sm">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!currentUser) {
-    return null; // Will redirect to login
+  if (!isAuthenticated) {
+    return null;
   }
 
   return <>{children}</>;
