@@ -106,27 +106,18 @@ export default function LoginPage() {
       return;
     }
 
-    // Validate password requirements
+    // Validate password requirements - Simple
     const passwordErrors = [];
-    if (newPassword.length < 8) {
-      passwordErrors.push("at least 8 characters");
-    }
-    if (!/[A-Z]/.test(newPassword)) {
-      passwordErrors.push("one uppercase letter");
-    }
-    if (!/[a-z]/.test(newPassword)) {
-      passwordErrors.push("one lowercase letter");
+    if (newPassword.length < 6) {
+      passwordErrors.push("at least 6 characters");
     }
     if (!/[0-9]/.test(newPassword)) {
-      passwordErrors.push("one number");
-    }
-    if (!/[!@#$%^&*(),.?":{}|<>]/.test(newPassword)) {
-      passwordErrors.push("one special character");
+      passwordErrors.push("at least one number");
     }
     
     if (passwordErrors.length > 0) {
       if (messageDiv) {
-        messageDiv.textContent = `❌ Password must contain: ${passwordErrors.join(", ")}`;
+        messageDiv.textContent = `❌ Password must contain: ${passwordErrors.join(" and ")}`;
         messageDiv.style.display = "block";
       }
       return;
@@ -244,7 +235,7 @@ export default function LoginPage() {
                 type="password"
                 placeholder="Enter your new password"
                 required
-                minLength={8}
+                minLength={6}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 style={{
@@ -256,16 +247,9 @@ export default function LoginPage() {
                   boxSizing: "border-box"
                 }}
               />
-              <div style={{ fontSize: "11px", color: "#666", marginTop: "4px" }}>
-                <p style={{ marginBottom: "2px" }}>Password must contain:</p>
-                <ul style={{ marginLeft: "16px", marginTop: "2px" }}>
-                  <li>At least 8 characters</li>
-                  <li>One uppercase letter (A-Z)</li>
-                  <li>One lowercase letter (a-z)</li>
-                  <li>One number (0-9)</li>
-                  <li>One special character (!@#$%^&*)</li>
-                </ul>
-              </div>
+              <p style={{ fontSize: "12px", color: "#666", marginTop: "4px" }}>
+                Password must be at least 6 characters and contain at least 1 number
+              </p>
             </div>
 
             <div style={{ marginBottom: "20px" }}>
@@ -276,7 +260,7 @@ export default function LoginPage() {
                 type="password"
                 placeholder="Confirm your new password"
                 required
-                minLength={8}
+                minLength={6}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 style={{
