@@ -2,6 +2,30 @@ import { NextRequest, NextResponse } from 'next/server';
 import { ensureDatabaseInitialized } from '@/lib/database';
 import { authenticateUser, initializeDeveloperAccounts } from '@/lib/user-auth';
 
+export async function GET(request: NextRequest) {
+  try {
+    // Check if user is authenticated via cookie
+    const authCookie = request.cookies.get('wpa_auth');
+    
+    if (!authCookie?.value) {
+      return NextResponse.json({ success: false, error: 'Not authenticated' }, { status: 401 });
+    }
+
+    try {
+      const userData = JSON.parse(authCookie.value);
+      return NextResponse.json({
+        success: true,
+        user: userData
+      });
+    } catch (error) {
+      return NextResponse.json({ success: false, error: 'Invalid auth token' }, { status: 401 });
+    }
+  } catch (error) {
+    console.error('Auth check error:', error);
+    return NextResponse.json({ success: false, error: 'Auth check failed' }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { email, password } = await request.json();

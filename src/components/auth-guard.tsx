@@ -1,31 +1,59 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
-export default function AuthGuard({ children }: { children: React.ReactNode }) {
+interface AuthGuardProps {
+  children: React.ReactNode;
+  requiredRole?: 'ADMIN' | 'USER' | 'CLIENT';
+}
+
+export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [mounted, setMounted] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [isClient, setIsClient] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
-    setMounted(true);
+    setIsClient(true);
   }, []);
 
   useEffect(() => {
-    if (!mounted) return;
+    if (!isClient) return;
 
     const checkAuth = async () => {
       try {
+        // First check session storage
+        const storedUser = sessionStorage.getItem('currentUser');
+        if (storedUser) {
+          const userData = JSON.parse(storedUser);
+          setUser(userData);
+          setIsAuthenticated(true);
+          setIsLoading(false);
+          return;
+        }
+
+        // Then check server auth
         const response = await fetch('/api/auth/simple-login', {
           method: 'GET',
           credentials: 'include',
         });
 
         if (response.ok) {
-          const data = await response.json();
-          setIsAuthenticated(!!data.user);
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const data = await response.json();
+            if (data.user) {
+              setUser(data.user);
+              setIsAuthenticated(true);
+            } else {
+              setIsAuthenticated(false);
+            }
+          } else {
+            // Response is not JSON (likely HTML error page)
+            setIsAuthenticated(false);
+          }
         } else {
           setIsAuthenticated(false);
         }
@@ -38,22 +66,37 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     };
 
     checkAuth();
-  }, [mounted]);
+  }, [isClient]);
 
   useEffect(() => {
-    if (!mounted || isLoading) return;
+    if (!isClient || isLoading) return;
 
     if (!isAuthenticated) {
       console.log('AuthGuard: No user found, redirecting to login');
-      router.push('/simple-login');
+      router.push('/login');
+      return;
     }
-  }, [isAuthenticated, isLoading, router, mounted]);
 
-  if (!mounted || isLoading) {
-    return <div>Loading...</div>;
+    if (user && requiredRole && user.role !== requiredRole) {
+      console.log(`AuthGuard: User role ${user.role} doesn't match required role ${requiredRole}`);
+      router.push('/login');
+      return;
+    }
+  }, [isAuthenticated, isLoading, requiredRole, router, isClient, user]);
+
+  if (!isClient || isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
+    return null;
+  }
+
+  if (requiredRole && user && user.role !== requiredRole) {
     return null;
   }
 

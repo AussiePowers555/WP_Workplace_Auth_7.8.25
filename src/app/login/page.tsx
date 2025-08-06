@@ -34,7 +34,14 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      let data;
+      const contentType = res.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        // Response is not JSON, likely an error page
+        data = { success: false, error: 'Server error - invalid response format' };
+      }
 
       if (!res.ok || !data?.success) {
         if (messageDiv) messageDiv.textContent = `❌ ${data?.error || 'Invalid credentials.'}`;
@@ -141,7 +148,13 @@ export default function LoginPage() {
         }),
       });
 
-      const changeData = await changeRes.json();
+      let changeData;
+      const contentType = changeRes.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        changeData = await changeRes.json();
+      } else {
+        changeData = { success: false, error: 'Server error - invalid response format' };
+      }
 
       if (!changeRes.ok || !changeData?.success) {
         const errorMsg = changeData?.error || "Failed to update password";
@@ -158,7 +171,13 @@ export default function LoginPage() {
         body: JSON.stringify({ email: userEmail, password: newPassword }),
       });
 
-      const loginData = await loginRes.json();
+      let loginData;
+      const loginContentType = loginRes.headers.get('content-type');
+      if (loginContentType && loginContentType.includes('application/json')) {
+        loginData = await loginRes.json();
+      } else {
+        loginData = { success: false, error: 'Server error - invalid response format' };
+      }
 
       if (loginRes.ok && loginData?.success) {
         // Store user data
