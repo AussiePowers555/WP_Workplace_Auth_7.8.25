@@ -68,7 +68,7 @@ export function createDynamicComponent<T = {}>(
 export const DynamicComponents = {
   // Charts and visualizations (heavy libraries)
   Chart: createDynamicComponent(
-    () => import('@/components/ui/chart'),
+    () => import('@/components/ui/chart').then(m => ({ default: m.Chart || m })) as any,
     <div className="bg-gray-100 rounded-lg p-8 animate-pulse">
       <div className="h-64 bg-gray-200 rounded"></div>
     </div>
@@ -95,7 +95,7 @@ export const DynamicComponents = {
   
   // Signature pad (canvas-heavy)
   SignaturePad: createDynamicComponent(
-    () => import('@/components/SignaturePad'),
+    () => import('@/components/SignaturePad').then(m => ({ default: m.SignaturePad || m.default || m })) as any,
     <div className="bg-gray-100 rounded-lg p-4 animate-pulse">
       <div className="h-48 bg-gray-200 rounded mb-4"></div>
       <div className="flex space-x-2">
@@ -105,24 +105,24 @@ export const DynamicComponents = {
     </div>
   ),
   
-  // Rich text editor (heavy)
-  RichTextEditor: createDynamicComponent(
-    () => import('@/components/ui/rich-text-editor'),
-    <div className="bg-white border rounded-lg animate-pulse">
-      <div className="border-b p-2 flex space-x-2">
-        {[...Array(8)].map((_, i) => (
-          <div key={i} className="h-8 w-8 bg-gray-200 rounded"></div>
-        ))}
-      </div>
-      <div className="p-4">
-        <div className="h-32 bg-gray-100 rounded"></div>
-      </div>
-    </div>
-  ),
+  // Rich text editor (heavy) - commented out as component doesn't exist yet
+  // RichTextEditor: createDynamicComponent(
+  //   () => import('@/components/ui/rich-text-editor'),
+  //   <div className="bg-white border rounded-lg animate-pulse">
+  //     <div className="border-b p-2 flex space-x-2">
+  //       {[...Array(8)].map((_, i) => (
+  //         <div key={i} className="h-8 w-8 bg-gray-200 rounded"></div>
+  //       ))}
+  //     </div>
+  //     <div className="p-4">
+  //       <div className="h-32 bg-gray-100 rounded"></div>
+  //     </div>
+  //   </div>
+  // ),
   
   // Calendar picker (date libraries can be heavy)
   Calendar: createDynamicComponent(
-    () => import('@/components/ui/calendar'),
+    () => import('@/components/ui/calendar').then(m => ({ default: m.Calendar || m })) as any,
     <div className="bg-white border rounded-lg p-4 animate-pulse">
       <div className="grid grid-cols-7 gap-2">
         {[...Array(35)].map((_, i) => (

@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 const BREVO_API_KEY = process.env.BREVO_API_KEY;
-
-if (!BREVO_API_KEY) {
-  throw new Error('BREVO_API_KEY environment variable is not set');
-}
 const BREVO_SMS_API_URL = 'https://api.brevo.com/v3/transactionalSMS/sms';
 
 // Format Australian phone number for international SMS
@@ -30,6 +26,16 @@ function formatAustralianPhone(phone: string): string {
 
 export async function POST(request: NextRequest) {
   try {
+    if (!BREVO_API_KEY) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'SMS service is not configured. Please contact support.',
+        },
+        { status: 500 }
+      );
+    }
+
     const { phone, clientName, caseNumber } = await request.json();
 
     if (!phone || !clientName || !caseNumber) {

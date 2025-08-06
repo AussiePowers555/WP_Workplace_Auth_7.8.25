@@ -1,3 +1,5 @@
+import { DatabaseService } from '../src/lib/database';
+
 export function logDatabaseError(
   error: any,
   operation: string,

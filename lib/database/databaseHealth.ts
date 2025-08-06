@@ -1,4 +1,4 @@
-import { DatabaseService } from './DatabaseService';
+import { DatabaseService } from '../../src/lib/database';
 
 export async function logDatabaseHealth() {
   try {

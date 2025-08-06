@@ -13,11 +13,11 @@ export default async function DashboardStatsServer() {
   
   // Calculate dashboard statistics
   const totalCases = cases.length;
-  const availableBikes = bikes.filter(bike => bike.status === 'Available').length;
+  const availableBikes = bikes.filter(bike => bike.status === 'available').length;
   const totalBikes = bikes.length;
   const overdueAmount = cases
     .filter(c => c.status === 'Awaiting Settlement' || c.status === 'Demands Sent')
-    .reduce((sum, c) => sum + (c.invoiced - c.paid), 0);
+    .reduce((sum, c) => sum + ((c.invoiced || 0) - (c.paid || 0)), 0);
   const overdueCases = cases.filter(c => c.status === 'Awaiting Settlement' || c.status === 'Demands Sent').length;
   const activeClaims = cases.filter(c => c.status === 'Settlement Agreed' || c.status === 'Awaiting Settlement').length;
 

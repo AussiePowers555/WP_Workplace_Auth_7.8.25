@@ -32,7 +32,7 @@ export async function GET(
     const decryptedData = DigitalSignatureService.decryptData(encryptedData);
 
     // Create response
-    const response = new NextResponse(decryptedData, {
+    const response = new NextResponse(decryptedData as any, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `inline; filename="${document.fileName}"`,

@@ -67,7 +67,8 @@ export async function GET(request: NextRequest) {
     if (authResult instanceof Response) {
       return authResult; // Return error response
     }
-    const { userId, userRole, workspaceId } = authResult;
+    const { user } = authResult;
+    const { id: userId, role: userRole, workspace_id: workspaceId } = user;
     
     // Get bikes filtered by workspace if user is workspace-scoped
     let bikes = userRole === 'workspace' && workspaceId
@@ -100,7 +101,8 @@ export async function POST(request: NextRequest) {
     if (authResult instanceof Response) {
       return authResult; // Return error response
     }
-    const { userId, userRole, workspaceId } = authResult;
+    const { user } = authResult;
+    const { id: userId, role: userRole, workspace_id: workspaceId } = user;
     
     const bikeData = await request.json();
     

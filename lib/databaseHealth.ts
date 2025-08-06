@@ -1,4 +1,4 @@
-import { DatabaseService } from '../database/DatabaseService';
+import { DatabaseService } from '../src/lib/database';
 
 export async function logDatabaseHealth() {
   try {
@@ -24,6 +24,7 @@ export async function logDatabaseHealth() {
     console.log('[DB HEALTH] Database connection is healthy');
   } catch (error) {
     console.error('[DB HEALTH ERROR]', error);
-    throw new Error(`Database health check failed: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Database health check failed: ${errorMessage}`);
   }
 }

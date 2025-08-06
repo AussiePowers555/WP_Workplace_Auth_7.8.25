@@ -42,6 +42,7 @@ export default function NewUserPage() {
     success: boolean;
     message: string;
     credentials?: { email: string; password: string };
+    validation?: { loginSuccess: boolean; user: any; message: string };
   } | null>(null);
 
   useEffect(() => {

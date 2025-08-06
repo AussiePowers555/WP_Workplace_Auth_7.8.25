@@ -4,11 +4,10 @@ import { Suspense, lazy, ComponentType } from 'react';
 import { LucideProps } from 'lucide-react';
 
 // Fallback icon component
-const FallbackIcon = ({ className, size = 24, ...props }: LucideProps) => (
+const FallbackIcon = ({ className, size = 24 }: { className?: string; size?: string | number }) => (
   <div 
     className={`inline-block animate-pulse bg-gray-300 rounded ${className}`}
     style={{ width: size, height: size }}
-    {...props}
   />
 );
 
@@ -22,8 +21,8 @@ export function createDynamicIcon(iconName: string) {
 
   return function IconWrapper(props: LucideProps) {
     return (
-      <Suspense fallback={<FallbackIcon {...props} />}>
-        <DynamicIcon {...props} />
+      <Suspense fallback={<FallbackIcon className={props.className} size={props.size} />}>
+        <DynamicIcon {...props as any} />
       </Suspense>
     );
   };

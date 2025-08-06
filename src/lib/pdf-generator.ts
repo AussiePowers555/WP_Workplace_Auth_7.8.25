@@ -284,7 +284,7 @@ export async function generateSignedPDFBlob(
   };
 
   return {
-    blob: new Blob([encryptedData], { type: 'application/pdf' }),
+    blob: new Blob([encryptedData as any], { type: 'application/pdf' }),
     metadata
   };
 }

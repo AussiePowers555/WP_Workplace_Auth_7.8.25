@@ -13,7 +13,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { NewCaseForm } from "./new-case-form";
 import { useSessionStorage } from "@/hooks/use-session-storage";
 import { useCases } from "@/hooks/use-database";
-import { useAuthFetch } from "@/lib/auth-fetch";
 import CommunicationLog from "./[caseId]/communication-log";
 import RequireWorkspace from "@/components/RequireWorkspace";
 import type {
