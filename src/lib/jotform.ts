@@ -8,9 +8,11 @@ import { buildJotFormURLWithFieldIds } from './jotform-field-inspector';
 const JOTFORM_API_KEY = process.env.JOTFORM_API_KEY;
 const JOTFORM_BASE_URL = 'https://api.jotform.com';
 
-if (!JOTFORM_API_KEY) {
-  console.warn('JOTFORM_API_KEY environment variable is not set');
-}
+// REMOVE_MARKS_START
+// if (!JOTFORM_API_KEY) {
+//   console.warn('JOTFORM_API_KEY environment variable is not set');
+// }
+// REMOVE_MARKS_END
 
 /**
  * Build a prefilled JotForm URL with case data

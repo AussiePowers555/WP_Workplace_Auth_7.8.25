@@ -6,9 +6,11 @@ const BREVO_API_KEY = process.env.BREVO_API_KEY;
 const BREVO_SENDER_EMAIL = process.env.BREVO_SENDER_EMAIL || 'whitepointer2016@gmail.com';
 const BREVO_API_URL = 'https://api.brevo.com/v3';
 
-if (!BREVO_API_KEY) {
-  console.warn('BREVO_API_KEY environment variable is not set');
-}
+// REMOVE_MARKS_START
+// if (!BREVO_API_KEY) {
+//   console.warn('BREVO_API_KEY environment variable is not set');
+// }
+// REMOVE_MARKS_END
 
 export interface EmailOptions {
   to: string;
