@@ -1,7 +1,6 @@
 "use client";
 
-import React from "react";
-import { useAuth } from "@/context/AuthContext";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,17 +13,68 @@ import {
   Database,
   Shield,
   Activity,
-  Package
+  Package,
+  AlertCircle
 } from "lucide-react";
 
 export default function AdminPage() {
-  const { user } = useAuth();
   const router = useRouter();
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    // Check for user in sessionStorage
+    try {
+      const storedUser = sessionStorage.getItem('currentUser');
+      if (storedUser) {
+        const userData = JSON.parse(storedUser);
+        setUser(userData);
+      }
+      setLoading(false);
+    } catch (err) {
+      console.error('Error loading user data:', err);
+      setError('Failed to load user data');
+      setLoading(false);
+    }
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4">Loading admin panel...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertCircle className="w-5 h-5 text-red-500" />
+              Error
+            </CardTitle>
+            <CardDescription>{error}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => router.push('/')} className="w-full">
+              Go to Dashboard
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Check if user is admin
-  const isAdmin = user?.role === 'admin';
+  const isAdmin = user?.role === 'admin' || user?.role === 'developer';
 
-  if (!isAdmin) {
+  if (!isAdmin && user) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Card className="w-full max-w-md">
@@ -147,10 +197,14 @@ export default function AdminPage() {
               key={action.href}
               className="hover:shadow-lg transition-shadow cursor-pointer"
               onClick={() => {
-                if (action.external) {
-                  window.open(action.href, '_blank');
-                } else {
-                  router.push(action.href);
+                try {
+                  if (action.external) {
+                    window.open(action.href, '_blank');
+                  } else {
+                    router.push(action.href);
+                  }
+                } catch (err) {
+                  console.error('Navigation error:', err);
                 }
               }}
             >
@@ -175,28 +229,45 @@ export default function AdminPage() {
       </div>
 
       {/* User Info Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Current User</CardTitle>
-          <CardDescription>Your account information</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-sm font-medium">Email:</span>
-              <span className="text-sm text-muted-foreground">{user?.email}</span>
+      {user && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Current User</CardTitle>
+            <CardDescription>Your account information</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm font-medium">Email:</span>
+                <span className="text-sm text-muted-foreground">{user.email || 'Not set'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium">Role:</span>
+                <Badge variant="outline">{user.role || 'Unknown'}</Badge>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-sm font-medium">User ID:</span>
+                <span className="text-sm text-muted-foreground font-mono">{user.id || 'Not set'}</span>
+              </div>
             </div>
-            <div className="flex justify-between">
-              <span className="text-sm font-medium">Role:</span>
-              <Badge variant="outline">{user?.role}</Badge>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm font-medium">User ID:</span>
-              <span className="text-sm text-muted-foreground font-mono">{user?.id}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Login Prompt */}
+      {!user && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Not Logged In</CardTitle>
+            <CardDescription>Please log in to access admin features</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => router.push('/login')} className="w-full">
+              Go to Login
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
