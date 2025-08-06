@@ -13,7 +13,7 @@
     "build": "next build",
     "build:trace": "next build --experimental-turbo-trace",
     "build:analyze": "cross-env ANALYZE_BUNDLE=true npm run build",
-    "start": "cross-env PORT=${PORT:-3000} next start -p 3000",
+    "start": "next start -p $PORT",
     "start:prod": "cross-env NODE_ENV=production PORT=${PORT:-3000} next start -p 3000",
     "start:windows": "next start -p 3000",
     "lint": "next lint",
