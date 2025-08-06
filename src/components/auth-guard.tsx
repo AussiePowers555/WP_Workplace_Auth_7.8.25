@@ -43,18 +43,27 @@ export function AuthGuard({ children, requiredRole }: AuthGuardProps) {
         if (response.ok) {
           const contentType = response.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
-            const data = await response.json();
-            if (data.user) {
-              setUser(data.user);
-              setIsAuthenticated(true);
-            } else {
+            try {
+              const data = await response.json();
+              if (data.success && data.user) {
+                setUser(data.user);
+                setIsAuthenticated(true);
+                // Store in sessionStorage for consistency
+                sessionStorage.setItem('currentUser', JSON.stringify(data.user));
+              } else {
+                setIsAuthenticated(false);
+              }
+            } catch (error) {
+              console.error('Failed to parse JSON response:', error);
               setIsAuthenticated(false);
             }
           } else {
             // Response is not JSON (likely HTML error page)
+            console.warn('Auth endpoint returned non-JSON response');
             setIsAuthenticated(false);
           }
         } else {
+          console.warn('Auth endpoint returned error status:', response.status);
           setIsAuthenticated(false);
         }
       } catch (error) {

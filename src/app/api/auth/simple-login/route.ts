@@ -4,6 +4,9 @@ import { authenticateUser, initializeDeveloperAccounts } from '@/lib/user-auth';
 
 export async function GET(request: NextRequest) {
   try {
+    // Ensure database is initialized
+    await ensureDatabaseInitialized();
+    
     // Check if user is authenticated via cookie
     const authCookie = request.cookies.get('wpa_auth');
     
@@ -18,6 +21,7 @@ export async function GET(request: NextRequest) {
         user: userData
       });
     } catch (error) {
+      console.error('Failed to parse auth cookie:', error);
       return NextResponse.json({ success: false, error: 'Invalid auth token' }, { status: 401 });
     }
   } catch (error) {
